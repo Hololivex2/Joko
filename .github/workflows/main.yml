@@ -31,26 +31,32 @@ jobs:
       with:
         gradle-version: '8.5'
 
-    - name: Extract zip and structure project
+    - name: Ensure Project Structure
       run: |
-        echo "Looking for zip files..."
-        ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
-        if [ -n "$ZIP_FILE" ]; then
-          echo "Found zip file: $ZIP_FILE. Extracting..."
-          unzip -o "$ZIP_FILE" -d .
-        fi
-        
-        # If project is inside a subfolder, bring it to root
-        SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
-        if [ -n "$SETTINGS_FILE" ]; then
-          DIR=$(dirname "$SETTINGS_FILE")
-          echo "Moving files from $DIR to root..."
-          cp -rf "$DIR"/* . || true
+        # Only unzip if project files are not at root
+        if [ ! -f "settings.gradle.kts" ] && [ ! -f "app/build.gradle.kts" ]; then
+          ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Extracting $ZIP_FILE..."
+            unzip -o "$ZIP_FILE" -d .
+          fi
+          SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
+          if [ -n "$SETTINGS_FILE" ]; then
+            DIR=$(dirname "$SETTINGS_FILE")
+            echo "Moving files from $DIR to root..."
+            cp -rf "$DIR"/* . || true
+          fi
         fi
 
-        # Fix top-level build.gradle.kts to avoid missing libs catalog error
+        # Ensure gradle.properties exists
+        cat << 'EOF' > gradle.properties
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        android.useAndroidX=true
+        android.nonFinalResIds=true
+        EOF
+
+        # Ensure root build.gradle.kts exists and uses exact plugin declarations
         cat << 'EOF' > build.gradle.kts
-        // Top-level build file
         plugins {
             id("com.android.application") version "8.2.2" apply false
             id("org.jetbrains.kotlin.android") version "1.9.22" apply false
