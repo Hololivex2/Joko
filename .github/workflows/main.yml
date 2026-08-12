@@ -24,19 +24,9 @@ jobs:
       with:
         gradle-version: '8.5'
 
-    - name: Find and extract project zip
+    - name: Extract zip and structure project
       run: |
-        python3 -c "
-import os, zipfile
-for root, dirs, files in os.walk('.'):
-    for file in files:
-        if file.endswith('.zip'):
-            zip_path = os.path.join(root, file)
-            print(f'Extracting {zip_path}...')
-            with zipfile.ZipFile(zip_path, 'r') as z:
-                z.extractall('.')
-"
-        # Move project files to root if nested
+        find . -type f -iname "*.zip" -exec unzip -o {} -d . \;
         SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
         if [ -n "$SETTINGS_FILE" ]; then
           DIR=$(dirname "$SETTINGS_FILE")
