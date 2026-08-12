@@ -19,14 +19,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.5'
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
     - name: Extract zip and structure project
       run: |
-        find . -type f -iname "*.zip" -exec unzip -o {} -d . \;
+        echo "Looking for zip files..."
+        ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Found zip file: $ZIP_FILE. Extracting..."
+          unzip -o "$ZIP_FILE" -d .
+        fi
+        
+        # If project is inside a subfolder, bring it to root
         SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
         if [ -n "$SETTINGS_FILE" ]; then
           DIR=$(dirname "$SETTINGS_FILE")
@@ -34,9 +39,18 @@ jobs:
           cp -rn "$DIR"/* . || true
         fi
 
+        # Fix top-level build.gradle.kts to avoid missing libs catalog error
+        cat << 'EOF' > build.gradle.kts
+        // Top-level build file
+        plugins {
+            id("com.android.application") version "8.2.2" apply false
+            id("org.jetbrains.kotlin.android") version "1.9.22" apply false
+        }
+        EOF
+
     - name: Generate Gradle Wrapper
       run: |
-        gradle wrapper --gradle-version 8.5
+        gradle wrapper --gradle-version 8.2
         chmod +x gradlew
 
     - name: Build Debug APK
