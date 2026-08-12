@@ -19,23 +19,24 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Accept Android SDK Licenses
-      run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
 
     - name: Find and extract project zip
       run: |
-        echo "Searching for zip files in repository..."
-        ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
-        if [ -n "$ZIP_FILE" ]; then
-          echo "Found zip file: $ZIP_FILE. Unzipping..."
-          unzip -o "$ZIP_FILE" -d .
-        fi
-        
-        # If project is inside a nested folder, bring it to root
+        python3 -c "
+import os, zipfile
+for root, dirs, files in os.walk('.'):
+    for file in files:
+        if file.endswith('.zip'):
+            zip_path = os.path.join(root, file)
+            print(f'Extracting {zip_path}...')
+            with zipfile.ZipFile(zip_path, 'r') as z:
+                z.extractall('.')
+"
+        # Move project files to root if nested
         SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
         if [ -n "$SETTINGS_FILE" ]; then
           DIR=$(dirname "$SETTINGS_FILE")
@@ -43,8 +44,13 @@ jobs:
           cp -rn "$DIR"/* . || true
         fi
 
+    - name: Generate Gradle Wrapper
+      run: |
+        gradle wrapper --gradle-version 8.5
+        chmod +x gradlew
+
     - name: Build Debug APK
-      run: gradle assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
