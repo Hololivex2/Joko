@@ -33,6 +33,9 @@ jobs:
 
     - name: Prepare Android Project
       run: |
+        # Write local.properties to explicitly point AGP to Android SDK
+        echo "sdk.dir=$ANDROID_HOME" > local.properties
+
         # Ensure gradle.properties exists
         cat << 'EOF' > gradle.properties
         org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
@@ -49,7 +52,7 @@ jobs:
         EOF
 
     - name: Build Debug APK
-      run: gradle assembleDebug --stacktrace
+      run: gradle assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
