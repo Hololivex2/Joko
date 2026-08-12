@@ -19,16 +19,23 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Accept Android SDK Licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
     - name: Find and extract project zip
       run: |
         echo "Searching for zip files in repository..."
-        ZIP_FILE=$(find . -maxdepth 3 -type f -iname "*.zip" | head -n 1)
+        ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
         if [ -n "$ZIP_FILE" ]; then
           echo "Found zip file: $ZIP_FILE. Unzipping..."
           unzip -o "$ZIP_FILE" -d .
         fi
         
-        # If project is inside a subfolder, bring it to root
+        # If project is inside a nested folder, bring it to root
         SETTINGS_FILE=$(find . -mindepth 2 -name "settings.gradle.kts" | head -n 1)
         if [ -n "$SETTINGS_FILE" ]; then
           DIR=$(dirname "$SETTINGS_FILE")
@@ -36,16 +43,11 @@ jobs:
           cp -rn "$DIR"/* . || true
         fi
 
-    - name: Generate Gradle Wrapper
-      run: |
-        gradle wrapper --gradle-version 8.2
-        chmod +x gradlew
-
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: gradle assembleDebug --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: FramePilot-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: app/build/outputs/apk/debug/*.apk
