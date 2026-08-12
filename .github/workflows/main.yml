@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "หลัก" ]
   workflow_dispatch:
 
 jobs:
@@ -15,9 +15,7 @@ jobs:
 
     - name: Unzip project files
       run: |
-        if [ -f project.zip ]; then
-          unzip -o project.zip
-        fi
+        find . -type f -name "*.zip" -exec unzip -o {} \;
 
     - name: Setup Java
       uses: actions/setup-java@v4
