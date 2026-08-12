@@ -10,19 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Unzip project files to root
+    - name: Extract zip file if present
       run: |
-        find . -name "*.zip" -exec unzip -o {} -d . \;
-        SUBDIR=$(find . -mindepth 2 -maxdepth 2 -name "build.gradle.kts" -exec dirname {} \;)
-        if [ -n "$SUBDIR" ]; then
-          echo "Found project in $SUBDIR, moving files to root..."
-          cp -r $SUBDIR/* .
+        echo "Looking for zip files..."
+        ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Found zip file: $ZIP_FILE. Extracting..."
+          unzip -o "$ZIP_FILE" -d .
+        fi
+        
+        # Move project files to root if nested
+        GRADLE_FILE=$(find . -mindepth 2 -maxdepth 3 -name "settings.gradle.kts" -o -name "build.gradle.kts" | head -n 1)
+        if [ -n "$GRADLE_FILE" ]; then
+          TARGET_DIR=$(dirname "$GRADLE_FILE")
+          if [ "$TARGET_DIR" != "." ]; then
+            echo "Moving files from $TARGET_DIR to root..."
+            cp -rn "$TARGET_DIR"/* . || true
+          fi
         fi
 
-    - name: Setup Java
+    - name: Setup JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
@@ -32,10 +42,16 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
 
     - name: Build Debug APK
-      run: gradle assembleDebug
+      run: |
+        if [ -f "./gradlew" ]; then
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        else
+          gradle assembleDebug
+        fi
 
-    - name: Upload APK Artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: FramePilot-APK
+        name: FramePilot-Android-APK
         path: app/build/outputs/apk/debug/app-debug.apk
