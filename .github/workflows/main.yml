@@ -22,6 +22,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
+    - name: Accept Android SDK Licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
     - name: Extract zip and structure project
       run: |
         echo "Looking for zip files..."
@@ -36,7 +40,7 @@ jobs:
         if [ -n "$SETTINGS_FILE" ]; then
           DIR=$(dirname "$SETTINGS_FILE")
           echo "Moving files from $DIR to root..."
-          cp -rn "$DIR"/* . || true
+          cp -rf "$DIR"/* . || true
         fi
 
         # Fix top-level build.gradle.kts to avoid missing libs catalog error
